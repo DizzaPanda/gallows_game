@@ -22,3 +22,16 @@ typedef struct{
 	unsigned capacity;
 	unsigned size;
 }
+string_vec_t;
+
+int 	str_vec_init	(string_vec_t *vec, unsigned capacity);		
+int 	str_vec_push	(string_vec_t *vec, char *value);		
+void 	str_vec_free	(string_vec_t *vec);				
+char *	str_vec_random	(string_vec_t *vec);				
+int		str_vec_load_from_file (string_vec_t *vec, char *filedir, char *filename);
+
+typedef struct{		
+	Pixmap bitmap;							
+	unsigned int bitmap_width, bitmap_height;			
+	int x, y;							
+}
