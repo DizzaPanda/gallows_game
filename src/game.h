@@ -35,3 +35,20 @@ typedef struct{
 	unsigned int bitmap_width, bitmap_height;			
 	int x, y;							
 }
+pixmap_attr_t;						
+
+int load_pixmap(x_window_param_t *window, pixmap_attr_t *pixmap, 
+		char *filedir, char *filename);
+
+typedef struct{
+	string_vec_t words;
+	pixmap_attr_t step_to_death[7];	
+}
+game_res_t;
+
+int 	game_res_init	(x_window_param_t *window, game_res_t *res, char *path);	
+void 	game_res_free	(x_window_param_t *window, game_res_t *res);			
+typedef enum{			
+	GAME_PROGRESS,
+	GAME_OVER
+}
