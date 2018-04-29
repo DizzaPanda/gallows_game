@@ -43,5 +43,33 @@ int window_init(x_window_param_t *param, char *title,
 	
 	return 0;
 }
+int str_vec_push(string_vec_t *vec, char *value){
+	if(value[0] == '\0')
+		return 0;
+	
+	if(vec->size >= vec->capacity){	
+		
+		unsigned new_capacity = vec->capacity * 2;
+		char ** new_content = realloc(vec->content, new_capacity * sizeof(char **));
+		if(!new_content){
+			perror("Vector push reallocation failed");
+			return 1;
+		}
+		
+		vec->capacity = new_capacity;
+		vec->content = new_content;
+	} 
+	
+	int value_len = strlen(value) + 1;
+	vec->content[vec->size] = malloc(value_len * sizeof(char));
+	if(!vec->content[vec->size]){
+		perror("Vector push allocation failed");
+		return 1;
+	}
+	
+	strncpy(vec->content[vec->size], value, value_len);
+	++vec->size;
 
+	return 0;
+}
 
