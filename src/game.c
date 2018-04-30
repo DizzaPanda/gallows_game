@@ -73,3 +73,13 @@ int str_vec_push(string_vec_t *vec, char *value){
 	return 0;
 }
 
+void str_vec_free(string_vec_t *vec){
+	if(vec->content == NULL)
+		return;
+	
+	for(int n = 0; n < vec->size; ++n){
+		 free(vec->content[n]);
+	}
+	free(vec->content);
+}
+
