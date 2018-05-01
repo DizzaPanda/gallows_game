@@ -83,3 +83,15 @@ void str_vec_free(string_vec_t *vec){
 	free(vec->content);
 }
 
+static char *merge_str(char *first, char *second){
+	int size = strlen(first);
+	size += strlen(second);	
+	++size;
+	
+	char *result = malloc(size * sizeof(char));
+	strncpy(result, first, strlen(first));
+	strncpy(result + strlen(first), second, strlen(second));
+	result[size] = '\0';
+	return result;
+}
+
