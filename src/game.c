@@ -95,3 +95,36 @@ static char *merge_str(char *first, char *second){
 	return result;
 }
 
+int	str_vec_load_from_file(string_vec_t *vec, char *filedir, char *filename){
+	str_vec_free(vec);
+	str_vec_init(vec, 10);
+	
+	char *fullpath = merge_str(filedir, filename);
+	
+	FILE* words_file = fopen(fullpath, "r");
+	if(!words_file) {
+		perror("Open words file failed");
+        return 1;
+    }
+	
+	free(fullpath);	
+	
+	char current_word[100];
+	int err = 0;
+	
+	while(!feof(words_file)){
+		fscanf(words_file, "%s", current_word);
+		
+		err = str_vec_push(vec, current_word);
+		if(err != 0){
+			fprintf(stderr,"Vector push failed.\n");
+			return 1;
+		}
+		
+		current_word[0] = '\0';
+	}
+	
+	return 0;
+}
+
+
