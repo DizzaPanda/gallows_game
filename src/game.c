@@ -127,4 +127,24 @@ int	str_vec_load_from_file(string_vec_t *vec, char *filedir, char *filename){
 	return 0;
 }
 
+int load_pixmap(x_window_param_t *window, pixmap_attr_t *pixmap,
+		char *filedir, char *filename){
+			
+	char *fullpath = merge_str(filedir, filename);
+	
+	int rc = XReadBitmapFile(window->display, window->window,
+             fullpath,
+             &pixmap->bitmap_width, &pixmap->bitmap_height,
+             &pixmap->bitmap,
+             &pixmap->x, &pixmap->y);
+	
+	if(rc != BitmapSuccess){
+		fprintf(stderr,"Read bitmap failed: %s\n", fullpath);
+		return 1;
+	}
+	
+	free(fullpath);
+	return 0;
+}
+
 
