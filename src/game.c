@@ -186,3 +186,10 @@ error_handler_1:
 	return 1;
 }
 
+void game_res_free(x_window_param_t *window, game_res_t *res){
+	str_vec_free(&res->words);
+	
+	for(int i = 0; i < 6 ; i++)
+		XFreePixmap(window->display, res->step_to_death[i].bitmap);
+}
+
