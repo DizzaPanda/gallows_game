@@ -147,4 +147,42 @@ int load_pixmap(x_window_param_t *window, pixmap_attr_t *pixmap,
 	return 0;
 }
 
+int game_res_init(x_window_param_t *window, game_res_t *res, char *path){
+	memset(&res->words, 0, sizeof(string_vec_t));
+
+#ifdef ENG_WORDS
+	int err = str_vec_load_from_file(&res->words, path, "words_eng.txt");
+#else
+	int err = str_vec_load_from_file(&res->words, path, "words.txt");
+#endif
+
+	if(err != 0)
+		goto error_handler_1;
+	
+	int count = 0;
+	
+	for( ; count < 7; count++){
+		
+		char image_name[11];
+		sprintf(image_name, "pos_%i.xbm", count);
+
+		err = load_pixmap(window, &res->step_to_death[count], path, image_name);\
+			if(err != 0)
+				goto error_handler_2;
+	}
+	
+	return 0;
+	
+error_handler_2:
+	do{
+		count--;
+		XFreePixmap(window->display, res->step_to_death[count].bitmap);
+	}while(count > 0);
+
+	str_vec_free(&res->words);
+	
+error_handler_1:
+	fprintf(stderr,"Game resources loading failed.\n");
+	return 1;
+}
 
