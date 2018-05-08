@@ -202,3 +202,24 @@ int game_init(game_stat_t *game, game_res_t *game_res){
 	}
 	return 0;
 }
+
+void game_letter_push(game_stat_t *game, char *letter){
+	int hitting = 0;
+	
+	for(int i = 0; i < strlen(game->current_word); ++i){
+		if(		(letter[0] == game->current_word[i]) 		&&
+				(letter[1] == game->current_word[i + 1])	){
+			game->word_progress[i] = game->current_word[i];
+			game->word_progress[i + 1] = game->current_word[i + 1];
+			i++;
+			hitting++;
+		}
+	}
+	
+	if(hitting == 0)
+		game->step_to_death++;
+	
+	if(game->step_to_death == 6)
+		game->status = GAME_OVER;	
+}
+
