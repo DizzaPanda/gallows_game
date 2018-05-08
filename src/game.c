@@ -193,3 +193,12 @@ void game_res_free(x_window_param_t *window, game_res_t *res){
 		XFreePixmap(window->display, res->step_to_death[i].bitmap);
 }
 
+int game_init(game_stat_t *game, game_res_t *game_res){
+	game->words_base = &game_res->words;
+	game->word_progress = NULL;
+	if(game_reset(game)){
+		fprintf(stderr,"Game reset failed.\n");
+		return 1;
+	}
+	return 0;
+}
