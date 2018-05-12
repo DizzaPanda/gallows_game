@@ -223,3 +223,28 @@ void game_letter_push(game_stat_t *game, char *letter){
 		game->status = GAME_OVER;	
 }
 
+static void game_word_progress_free(game_stat_t *game){
+	if(game->word_progress != NULL)
+		free(game->word_progress);
+}
+
+int game_reset(game_stat_t *game){
+	game->current_word = str_vec_random(game->words_base);
+	
+	game_word_progress_free(game);
+	int word_len = strlen(game->current_word) + 1;
+	
+	game->word_progress = malloc(word_len * sizeof(char));
+	if(!game->word_progress){
+		perror("Word_progress allocation failed");
+		return 1;
+	}
+	
+	memset(game->word_progress, '_', word_len * sizeof(char));
+	game->word_progress[word_len - 1] = '\0';
+	
+	game->step_to_death = 0; 
+	game->status = GAME_PROGRESS;
+	
+	return 0;
+}
