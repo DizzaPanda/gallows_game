@@ -248,3 +248,41 @@ int game_reset(game_stat_t *game){
 	
 	return 0;
 }
+
+void game_free(game_stat_t *game){
+	game_word_progress_free(game);
+}
+
+char *game_return_progress(game_stat_t *game){
+	int size = strlen(game->current_word) + 1;
+	
+	static char *result;
+	
+	if(result != NULL)
+		free(result);
+		
+	result = malloc(size * sizeof(char));
+	
+	memset(result, 0, size * sizeof(char));
+	
+	for(int i = 0, j = 0; j < size; i++, j++){
+		result[i] = game->word_progress[j];
+		if(game->word_progress[j] == '_')
+			j++;
+	}
+	
+	return result;
+}
+
+char *game_return_progress_eng (game_stat_t *game){
+	return game->word_progress;
+}
+
+int	game_win_check(game_stat_t *game){
+	return !strcmp(game->current_word, game->word_progress) ? 1 : 0;
+}
+
+int	game_lose_check(game_stat_t *game){
+	return game->step_to_death == 6 ? 1 : 0;
+}
+
