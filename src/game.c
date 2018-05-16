@@ -286,3 +286,13 @@ int	game_lose_check(game_stat_t *game){
 	return game->step_to_death == 6 ? 1 : 0;
 }
 
+/*алфавит*/
+
+void game_draw(x_window_param_t *win, game_res_t *res, game_stat_t *game){
+	XClearWindow(win->display, win->window);
+	
+	pixmap_attr_t *current_pixmap = &res->step_to_death[game->step_to_death];
+	XCopyPlane(win->display, current_pixmap->bitmap, win->window, win->gc,
+			 0, 0, current_pixmap->bitmap_width, current_pixmap->bitmap_height,
+			 100, 0, 1);
+
