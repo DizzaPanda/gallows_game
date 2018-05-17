@@ -296,3 +296,33 @@ void game_draw(x_window_param_t *win, game_res_t *res, game_stat_t *game){
 			 0, 0, current_pixmap->bitmap_width, current_pixmap->bitmap_height,
 			 100, 0, 1);
 
+#ifdef ENG_WORDS							
+	char *word = game_return_progress_eng(game);
+#else 
+	char *word = game_return_progress(game);
+#endif
+	
+	if(game_win_check(game)){
+		XDrawString(win->display, win->window, win->gc, 50, 110,
+			"You win!", strlen("You win!"));
+		XDrawString(win->display, win->window, win->gc, 100, 220,
+			game->current_word, strlen(game->current_word));
+			
+		printf("%s\n", game->current_word);
+	} else if(game_lose_check(game)){
+		XDrawString(win->display, win->window, win->gc, 40, 110,
+			"You lose!", strlen("You lose!"));
+		XDrawString(win->display, win->window, win->gc, 100, 220,
+			game->current_word, strlen(game->current_word));
+			
+		printf("%s\n", game->current_word);
+	} else{
+		XDrawString(win->display, win->window, win->gc, 100, 220,
+			word, strlen(word));
+			
+		printf("%s\n", word);
+	}
+	
+	XFlush(win->display);
+}
+
