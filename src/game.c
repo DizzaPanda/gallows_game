@@ -326,3 +326,77 @@ void game_draw(x_window_param_t *win, game_res_t *res, game_stat_t *game){
 	XFlush(win->display);
 }
 
+static int graphic_set(x_window_param_t *win){					//настройка 
+/*	XFontStruct *fontInfo;							//шрифт
+		
+	if((fontInfo = XLoadQueryFont(win->display, "*cronyx*" )) == NULL){
+		fprintf(stderr, "Font loading failed.\n");			//если не получилось
+		return 1;
+	}
+	
+	XSetFont (win->display, win->gc, fontInfo->fid);			//если получилось - устанавливаем этот шрифт
+	*/
+	
+	XSetBackground(win->display, win->gc, 					//устанавливаем задний и передний фон
+			WhitePixel(win->display, win->screen_number));
+			
+	XSetForeground(win->display, win->gc, 
+			BlackPixel(win->display, win->screen_number) );
+	
+	return 0;
+}
+
+int pre_game_settings(x_window_param_t *win){					//предигровые настройки
+	if(graphic_set(win)){							//обработка ошибок
+		fprintf(stderr, "graphic_set failed.\n");
+		return 1;
+	}
+}
+
+static unsigned int event_keycode(x_window_param_t *win){			//получаем код клавиши события
+	return win->event.xkey.keycode;
+}
+
+void game_loop(x_window_param_t *win, game_res_t *res, game_stat_t *game){	//игровой цикл
+	
+	XNextEvent(win->display, &win->event);					//получаем текущее событие
+	game_draw(win, res, game);						//отрисовка экрана
+	
+	while(win->display){							//цикл
+		XNextEvent(win->display, &win->event);				//получаем событие
+		
+		if (win->event.type == KeyPress){				//если это событие равно нажатой клавиши
+			
+			if (event_keycode(win) == ESC_KEYCODE )			//если эта клавиша esc
+                break;								//закрываем окно
+			
+			if(game->status == GAME_OVER){				//если статус game over
+				game_reset(game);				//обновляем игру
+			}else{
+				
+#ifdef ENG_WORDS										//разделение на ингл и русс яз
+				char letter;
+				return_letter_by_keycode_eng(event_keycode(win), &letter);
+				
+				game_letter_push_eng(game, letter);
+#else
+				char letter[3];
+				letter[2] = '\0';
+				return_letter_by_keycode(event_keycode(win), letter);
+				
+				game_letter_push(game, letter);
+#endif
+			}
+			
+			game_draw(win, res, game);					//после того как передали разделение в логику игры отрисовываем окно по новой
+			
+			if(game_win_check(game))
+				game->status = GAME_OVER;				//если игра окончина присваеваем значение game over
+		}
+	}
+}
+
+#ifdef ENG_WORDS
+#undef ENG_WORDS
+#endif
+
