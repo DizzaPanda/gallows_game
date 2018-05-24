@@ -9,11 +9,11 @@
 
 #define ESC_KEYCODE 0x09
 
-static void set_title(char *title_ptr, Display *display, Window window){
+static void set_title(char *title_ptr, Display *display, Window window){	//дает имя окна
 	XTextProperty windowname;							
 	XStringListToTextProperty (&title_ptr, 1, &windowname);
 
-	XSetWMProperties ( display, window, &windowname,
+	XSetWMProperties ( display, window, &windowname,			//устанавливает свойства окну
   		NULL, NULL, NULL, NULL, NULL,
   		NULL );
 }
@@ -29,94 +29,122 @@ int window_init(x_window_param_t *param, char *title,
 	
 	param->screen_number = DefaultScreen(param->display);
 	
-	param->window =  XCreateSimpleWindow(
-			param->display, RootWindow(param->display, param->screen_number), sudo
-            		BlackPixel(param->display, param->screen_number),
+	param->window =  XCreateSimpleWindow(						//создаем окно
+			param->display, RootWindow(param->display, param->screen_number), 
+			pos_x, pos_y, Width, Height, 1,
+            		BlackPixel(param->display, param->screen_number), 		//возвращает код цвета
 			WhitePixel(param->display, param->screen_number));
 	
-	set_title(title, param->display, param->window);
+	set_title(title, param->display, param->window);			//имя окошка
 	
-	XSelectInput(param->display, param->window, KeyPressMask | KeyReleaseMask );
-	XMapWindow(param->display, param->window);
+	XSelectInput(param->display, param->window, KeyPressMask | KeyReleaseMask );	//выбирает устройство обработки событий
+	XMapWindow(param->display, param->window);					//отображает окно
 	
-	param->gc = XCreateGC ( param->display, param->window, 0 , NULL );
+	param->gc = XCreateGC ( param->display, param->window, 0 , NULL );		//создает "руку которая берет нужный карандашь для рисования"
 	
 	return 0;
 }
-int str_vec_push(string_vec_t *vec, char *value){
-	if(value[0] == '\0')
-		return 0;
+
+void window_free(x_window_param_t *param){			//освобождение памяти
+	XFreeGC ( param->display, param->gc );			//освобождаем графический контекст
+	XCloseDisplay(param->display);				//закрываем сервер display
+}
+
+int str_vec_init(string_vec_t *vec, unsigned capacity){		//подготовка структуры
+	vec->content = malloc(capacity * sizeof(char **));	//выделяем память
 	
-	if(vec->size >= vec->capacity){	
-		
-		unsigned new_capacity = vec->capacity * 2;
-		char ** new_content = realloc(vec->content, new_capacity * sizeof(char **));
-		if(!new_content){
-			perror("Vector push reallocation failed");
-			return 1;
-		}
-		
-		vec->capacity = new_capacity;
-		vec->content = new_content;
-	} 
-	
-	int value_len = strlen(value) + 1;
-	vec->content[vec->size] = malloc(value_len * sizeof(char));
-	if(!vec->content[vec->size]){
-		perror("Vector push allocation failed");
+	if(!vec->content){					//обработка ошибок
+		perror("Vector init allocation failed");
 		return 1;
 	}
 	
-	strncpy(vec->content[vec->size], value, value_len);
-	++vec->size;
-
+	vec->capacity = capacity;				//переменной capacity присваиваем значение размера выделеной памяти
+	vec->size = 0;						//изначальный размер равен нулю
+	
 	return 0;
 }
 
-void str_vec_free(string_vec_t *vec){
-	if(vec->content == NULL)
+int str_vec_push(string_vec_t *vec, char *value){		//добавляем слово
+	if(value[0] == '\0')
+		return 0;
+	
+	if(vec->size >= vec->capacity){				//проверяем не заполнен ли контейнер
+		
+		unsigned new_capacity = vec->capacity * 2;	//если заполнен удваеваем место
+		char ** new_content = realloc(vec->content, new_capacity * sizeof(char **));	//перевыделяет новое пространство и копирует туда старые элементы
+		
+		if(!new_content){				//проверяем не заполнен ли новый контейнер
+			perror("Vector push reallocation failed");	//если есть ошибка
+			return 1;
+		}
+		
+		vec->capacity = new_capacity;			//если нет ошибки
+		vec->content = new_content;
+	} 
+	
+	int value_len = strlen(value) + 1;				//определяем размер слова
+	vec->content[vec->size] = malloc(value_len * sizeof(char));	//выделяем память для слова
+	if(!vec->content[vec->size]){					//проверяем получилось ли добавить слово
+		perror("Vector push allocation failed");		//если не получилось
+		return 1;
+	}
+	
+	strncpy(vec->content[vec->size], value, value_len);		//копируем слово по данному указателю
+	++vec->size;							//увеличиваем размер size
+	
+	return 0;
+}
+
+void str_vec_free(string_vec_t *vec){					//освобождение
+	if(vec->content == NULL)					//проверяет нужно ли вообще очищать content
 		return;
 	
-	for(int n = 0; n < vec->size; ++n){
+	for(int n = 0; n < vec->size; ++n){				//если нужно, то проходим по каждому элементу и очищаем
 		 free(vec->content[n]);
 	}
-	free(vec->content);
+	free(vec->content);						//освобождаем саму таблицу
 }
 
-static char *merge_str(char *first, char *second){
-	int size = strlen(first);
-	size += strlen(second);	
-	++size;
-	
-	char *result = malloc(size * sizeof(char));
-	strncpy(result, first, strlen(first));
-	strncpy(result + strlen(first), second, strlen(second));
-	result[size] = '\0';
-	return result;
+char *str_vec_random(string_vec_t *vec){				//выбирает рандомное слово
+	srand(time(NULL));						//задает зерно для вычисления рандомного числа
+	int random_variable = rand();					//возвращает случайное число
+	return vec->content[random_variable % vec->size];		//возвращает элемент таблицы в которой находится слово
 }
 
-int	str_vec_load_from_file(string_vec_t *vec, char *filedir, char *filename){
-	str_vec_free(vec);
-	str_vec_init(vec, 10);
+static char *merge_str(char *first, char *second){			//объединяет два слова в одну строку и возвращает указатель на нее
+	int size = strlen(first);					//высчитываем необходимый для выделения размер памяти(создаем переменную и присваиваем ей значение первого аргумента функции
+	size += strlen(second);						//прибавляем к этому аргументу значение второй строки
+	++size;								//увеличиваем на единицу
 	
-	char *fullpath = merge_str(filedir, filename);
+	char *result = malloc(size * sizeof(char));			//создаем переменную и выделяем под нее память
+	strncpy(result, first, strlen(first));				//копируем в эту память слово
+	strncpy(result + strlen(first), second, strlen(second));	//копируем второе слово оставив место под первое
+	result[size] = '\0';						//присваиваем конец строки
+	return result;							//возвращаем указатель
+}
+
+int	str_vec_load_from_file(string_vec_t *vec, char *filedir, char *filename){	//загружаем слова из файла
+	str_vec_free(vec);								//освобождает память
+	str_vec_init(vec, 10);								//подготовка вектора к работе
 	
-	FILE* words_file = fopen(fullpath, "r");
-	if(!words_file) {
+	char *fullpath = merge_str(filedir, filename);			//объединяем две переменные в одну строку и передаем указатель на новую строку
+	
+	FILE* words_file = fopen(fullpath, "r");			//создаем указатель на файл со словами, открываем файл для чтения
+	if(!words_file) {						//обработка ошибок
 		perror("Open words file failed");
         return 1;
     }
 	
-	free(fullpath);	
+	free(fullpath);							//если удалось открыть файл удаляем уже ненужную переменную
 	
-	char current_word[100];
-	int err = 0;
+	char current_word[100];						//массив в котором хранится слово
+	int err = 0;							//создаем переменную в которой хранится значение ошибки
 	
-	while(!feof(words_file)){
-		fscanf(words_file, "%s", current_word);
+	while(!feof(words_file)){					//цикл, который будет работать до тех пор пока файл не закончился
+		fscanf(words_file, "%s", current_word);			//принимает значение из файла
 		
-		err = str_vec_push(vec, current_word);
-		if(err != 0){
+		err = str_vec_push(vec, current_word);			//добавляем это слово в наш вектор
+		if(err != 0){						//обработка ошибок
 			fprintf(stderr,"Vector push failed.\n");
 			return 1;
 		}
@@ -127,46 +155,46 @@ int	str_vec_load_from_file(string_vec_t *vec, char *filedir, char *filename){
 	return 0;
 }
 
-int load_pixmap(x_window_param_t *window, pixmap_attr_t *pixmap,
+int load_pixmap(x_window_param_t *window, pixmap_attr_t *pixmap, 	//структура, которая хранит картинку
 		char *filedir, char *filename){
 			
-	char *fullpath = merge_str(filedir, filename);
+	char *fullpath = merge_str(filedir, filename);			//объединяем дерикторию и имя файла в одну строку
 	
-	int rc = XReadBitmapFile(window->display, window->window,
-             fullpath,
-             &pixmap->bitmap_width, &pixmap->bitmap_height,
-             &pixmap->bitmap,
-             &pixmap->x, &pixmap->y);
+	int rc = XReadBitmapFile(window->display, window->window,	//возвращает результат на сколько успешно у нас получилось прочитать картинку
+             fullpath,							//путь
+             &pixmap->bitmap_width, &pixmap->bitmap_height,		//параметры
+             &pixmap->bitmap,						//место куда загрузится картинка
+             &pixmap->x, &pixmap->y);					//координаты
 	
-	if(rc != BitmapSuccess){
+	if(rc != BitmapSuccess){					//обработка ошибок
 		fprintf(stderr,"Read bitmap failed: %s\n", fullpath);
 		return 1;
 	}
 	
-	free(fullpath);
+	free(fullpath);							//освобождение памяти	
 	return 0;
 }
 
-int game_res_init(x_window_param_t *window, game_res_t *res, char *path){
-	memset(&res->words, 0, sizeof(string_vec_t));
+int game_res_init(x_window_param_t *window, game_res_t *res, char *path){	//загрузка ресурсов
+	memset(&res->words, 0, sizeof(string_vec_t));				//зануляем память в базе слов
 
-#ifdef ENG_WORDS
+#ifdef ENG_WORDS								//разделение по языкам
 	int err = str_vec_load_from_file(&res->words, path, "words_eng.txt");
 #else
 	int err = str_vec_load_from_file(&res->words, path, "words.txt");
 #endif
 
-	if(err != 0)
-		goto error_handler_1;
+	if(err != 0)								//обработка ошибок
+		goto error_handler_1;						//если не получилось загрузить слова то перекидывает на  error_handler_1
 	
-	int count = 0;
+	int count = 0;										//счетчик для загрузки картинок
 	
 	for( ; count < 7; count++){
 		
-		char image_name[11];
-		sprintf(image_name, "pos_%i.xbm", count);
+		char image_name[11];								//массив для названия файла картинки
+		sprintf(image_name, "pos_%i.xbm", count);					//задаем правильное название файла используя счетчик
 
-		err = load_pixmap(window, &res->step_to_death[count], path, image_name);\
+		err = load_pixmap(window, &res->step_to_death[count], path, image_name);	//если не получилось загрузить картинку то перекидывает на error_handler_2
 			if(err != 0)
 				goto error_handler_2;
 	}
@@ -174,40 +202,40 @@ int game_res_init(x_window_param_t *window, game_res_t *res, char *path){
 	return 0;
 	
 error_handler_2:
-	do{
+	do{											//очищает файлы в обратном порядке относительно счетчика
 		count--;
 		XFreePixmap(window->display, res->step_to_death[count].bitmap);
 	}while(count > 0);
 
-	str_vec_free(&res->words);
+	str_vec_free(&res->words);								//очищает вектор
 	
 error_handler_1:
-	fprintf(stderr,"Game resources loading failed.\n");
+	fprintf(stderr,"Game resources loading failed.\n");		//выводит сообщение об ошибке
 	return 1;
 }
 
-void game_res_free(x_window_param_t *window, game_res_t *res){
+void game_res_free(x_window_param_t *window, game_res_t *res){		//освобождает ресурсы
 	str_vec_free(&res->words);
 	
 	for(int i = 0; i < 6 ; i++)
 		XFreePixmap(window->display, res->step_to_death[i].bitmap);
 }
 
-int game_init(game_stat_t *game, game_res_t *game_res){
-	game->words_base = &game_res->words;
-	game->word_progress = NULL;
-	if(game_reset(game)){
+int game_init(game_stat_t *game, game_res_t *game_res){			//подготовка структуры к работе
+	game->words_base = &game_res->words;				//присваиваем значение для базы слов
+	game->word_progress = NULL;					//прогресс слова
+	if(game_reset(game)){						//сброс текущего прогреса
 		fprintf(stderr,"Game reset failed.\n");
 		return 1;
 	}
 	return 0;
 }
 
-void game_letter_push(game_stat_t *game, char *letter){
-	int hitting = 0;
+void game_letter_push(game_stat_t *game, char *letter){					//принимаем букву из русского яз
+	int hitting = 0;								//количество попаданий
 	
-	for(int i = 0; i < strlen(game->current_word); ++i){
-		if(		(letter[0] == game->current_word[i]) 		&&
+	for(int i = 0; i < strlen(game->current_word); ++i){				//проходим по всему слову и проверяем подходит ли буква, которую мы написали
+		if(		(letter[0] == game->current_word[i]) 		&&	//проверяем по 2 чара из-за особенностей символов русского алфавита (занимают 2 чара)
 				(letter[1] == game->current_word[i + 1])	){
 			game->word_progress[i] = game->current_word[i];
 			game->word_progress[i + 1] = game->current_word[i + 1];
@@ -216,56 +244,73 @@ void game_letter_push(game_stat_t *game, char *letter){
 		}
 	}
 	
+	if(hitting == 0)								//если у нас 0 попаданий
+		game->step_to_death++;							//счетчик "шагов к проигрышу" увеличивается
+	
+	if(game->step_to_death == 6)							//если счетчик "шагов к проигрышу" достиг 6 - проигрыш
+		game->status = GAME_OVER;	
+}
+
+void game_letter_push_eng(game_stat_t *game, char letter){				//тот же цикл для английской раскладки
+	int hitting = 0;
+	
+	for(int i = 0; i < strlen(game->current_word); ++i){
+		if(letter == game->current_word[i]){
+			game->word_progress[i] = game->current_word[i];
+			hitting++;
+		}
+	}
+	
 	if(hitting == 0)
 		game->step_to_death++;
 	
 	if(game->step_to_death == 6)
-		game->status = GAME_OVER;	
+		game->status = GAME_OVER;
 }
 
-static void game_word_progress_free(game_stat_t *game){
+static void game_word_progress_free(game_stat_t *game){				//освобождает память, которая выделена для word_progress
 	if(game->word_progress != NULL)
 		free(game->word_progress);
 }
 
-int game_reset(game_stat_t *game){
-	game->current_word = str_vec_random(game->words_base);
+int game_reset(game_stat_t *game){						//сбрасывает текущий прогресс
+	game->current_word = str_vec_random(game->words_base);			//берем новое рандомное слово
 	
-	game_word_progress_free(game);
-	int word_len = strlen(game->current_word) + 1;
+	game_word_progress_free(game);						//удаляет старое слово
+	int word_len = strlen(game->current_word) + 1;				//узнаем длину нового слова
 	
-	game->word_progress = malloc(word_len * sizeof(char));
-	if(!game->word_progress){
+	game->word_progress = malloc(word_len * sizeof(char));			//выделяем память под новое слово
+	if(!game->word_progress){						//оброботка ошибок
 		perror("Word_progress allocation failed");
 		return 1;
 	}
 	
-	memset(game->word_progress, '_', word_len * sizeof(char));
-	game->word_progress[word_len - 1] = '\0';
+	memset(game->word_progress, '_', word_len * sizeof(char));		//если ошибки нет записываем везде _
+	game->word_progress[word_len - 1] = '\0';				//последниму значению присваиваем значение конца строки
 	
-	game->step_to_death = 0; 
+	game->step_to_death = 0;						//счетчик "шагов до проигрыша" в начале игры равен нулю 
 	game->status = GAME_PROGRESS;
 	
 	return 0;
 }
 
-void game_free(game_stat_t *game){
-	game_word_progress_free(game);
+void game_free(game_stat_t *game){						//освобождение памяти структуры логики игры
+	game_word_progress_free(game);						//освобождаем память, которая выделилась для game_word_progress
 }
 
-char *game_return_progress(game_stat_t *game){
-	int size = strlen(game->current_word) + 1;
+char *game_return_progress(game_stat_t *game){					//возвращает слово (для русского яз)
+	int size = strlen(game->current_word) + 1;				//узнаем размер слова
 	
-	static char *result;
+	static char *result;							//создаем указатель на новую строку
 	
-	if(result != NULL)
-		free(result);
+	if(result != NULL)							//проверяем равен ли он null
+		free(result);							//если не равен - то удаляем
 		
-	result = malloc(size * sizeof(char));
+	result = malloc(size * sizeof(char));					//выделяем новую память
 	
-	memset(result, 0, size * sizeof(char));
+	memset(result, 0, size * sizeof(char));					//зануляем
 	
-	for(int i = 0, j = 0; j < size; i++, j++){
+	for(int i = 0, j = 0; j < size; i++, j++){				//в цикле мы используем 2 переменные счетчика для отслеживания позиции в текущемм слове и слове, которое мы получим в результате. Это необходимо из-за того, что в Linux русская раскладка требует 2 байта и кол-во подчеркиваний в текущем слове удвоено. При нахождении подчеркиваний счетчик позиции текущего слова перепрыгивает через 1 байт
 		result[i] = game->word_progress[j];
 		if(game->word_progress[j] == '_')
 			j++;
@@ -274,48 +319,46 @@ char *game_return_progress(game_stat_t *game){
 	return result;
 }
 
-char *game_return_progress_eng (game_stat_t *game){
+char *game_return_progress_eng (game_stat_t *game){				//возвращаем слово (для англ яз)
 	return game->word_progress;
 }
 
-int	game_win_check(game_stat_t *game){
-	return !strcmp(game->current_word, game->word_progress) ? 1 : 0;
+int	game_win_check(game_stat_t *game){					//проверяем совпадает ли исходное слово с прогрессом
+	return !strcmp(game->current_word, game->word_progress) ? 1 : 0;	//если совпадает 1, если нет 0
 }
 
-int	game_lose_check(game_stat_t *game){
-	return game->step_to_death == 6 ? 1 : 0;
+int	game_lose_check(game_stat_t *game){					//проверяем равно ли количество "шагов до проигрыша" 6	
+	return game->step_to_death == 6 ? 1 : 0;				//если совпадает 1, если нет 0
 }
-
 /*алфавит*/
-
-void game_draw(x_window_param_t *win, game_res_t *res, game_stat_t *game){
-	XClearWindow(win->display, win->window);
+void game_draw(x_window_param_t *win, game_res_t *res, game_stat_t *game){			//эта функция рисует всю игру
+	XClearWindow(win->display, win->window);						//очищаем все, что было нарисовано
 	
-	pixmap_attr_t *current_pixmap = &res->step_to_death[game->step_to_death];
-	XCopyPlane(win->display, current_pixmap->bitmap, win->window, win->gc,
+	pixmap_attr_t *current_pixmap = &res->step_to_death[game->step_to_death];		//указатель на картинку равен значению счетчика "шагов до проигрыша"
+	XCopyPlane(win->display, current_pixmap->bitmap, win->window, win->gc,			//рисуем картинку
 			 0, 0, current_pixmap->bitmap_width, current_pixmap->bitmap_height,
 			 100, 0, 1);
 
 #ifdef ENG_WORDS							
-	char *word = game_return_progress_eng(game);
+	char *word = game_return_progress_eng(game);			//присваиваем указатель на текущее слова (англ яз)
 #else 
-	char *word = game_return_progress(game);
+	char *word = game_return_progress(game);			//присваиваем указатель на текущее слова (русский яз)
 #endif
 	
-	if(game_win_check(game)){
-		XDrawString(win->display, win->window, win->gc, 50, 110,
+	if(game_win_check(game)){						//если победили
+		XDrawString(win->display, win->window, win->gc, 50, 110, 	//на координатах 50, 110 пишет фразу "You win!"
 			"You win!", strlen("You win!"));
-		XDrawString(win->display, win->window, win->gc, 100, 220,
+		XDrawString(win->display, win->window, win->gc, 100, 220,	//на координатах 100, 220 пишет слово
 			game->current_word, strlen(game->current_word));
 			
 		printf("%s\n", game->current_word);
-	} else if(game_lose_check(game)){
+	} else if(game_lose_check(game)){					//если проиграли
 		XDrawString(win->display, win->window, win->gc, 40, 110,
 			"You lose!", strlen("You lose!"));
 		XDrawString(win->display, win->window, win->gc, 100, 220,
 			game->current_word, strlen(game->current_word));
 			
-		printf("%s\n", game->current_word);
+		printf("%s\n", game->current_word);				// если не то и не то - выводит текущий прогресс
 	} else{
 		XDrawString(win->display, win->window, win->gc, 100, 220,
 			word, strlen(word));
@@ -323,7 +366,7 @@ void game_draw(x_window_param_t *win, game_res_t *res, game_stat_t *game){
 		printf("%s\n", word);
 	}
 	
-	XFlush(win->display);
+	XFlush(win->display);							//выводит
 }
 
 static int graphic_set(x_window_param_t *win){					//настройка 
@@ -399,4 +442,3 @@ void game_loop(x_window_param_t *win, game_res_t *res, game_stat_t *game){	//и�
 #ifdef ENG_WORDS
 #undef ENG_WORDS
 #endif
-
